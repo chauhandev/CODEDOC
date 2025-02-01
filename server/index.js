@@ -349,13 +349,13 @@ const outputFileName = process.env.OUTPUT_FILE_NAME || 'PROJECT_DOCUMENTATION';
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
-    if (!fs.existsSync(documentPath)) {
-        fs.mkdirSync(documentPath, { recursive: true }); 
-    }
+    // if (!fs.existsSync(documentPath)) {
+    //     fs.mkdirSync(documentPath, { recursive: true }); 
+    // }
 
-    sql.connect(dbConfig).then(() => {  
-        console.log("Connected to database");
-    }).catch(error => { 
-        console.error("Error connecting to database:", error);
-    });
+    // // sql.connect(dbConfig).then(() => {  
+    //     console.log("Connected to database");
+    // }).catch(error => { 
+    //     console.error("Error connecting to database:", error);
+    // });
 });

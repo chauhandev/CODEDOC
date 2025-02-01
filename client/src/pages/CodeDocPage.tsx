@@ -12,7 +12,7 @@ import {
 import { DocumentationResult } from "../components/DocumentationResult";
 // @ts-ignores
 import html2pdf from "html2pdf.js";
-import { Paragraph, HeadingLevel } from "docx";
+// import { Paragraph, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 
 
@@ -252,144 +252,144 @@ function CodeDocPage() {
     }
   };
 
-  const generateDocxContent = () => {
-    const content: any[] = [];
+  // const generateDocxContent = () => {
+  //   const content: any[] = [];
 
-    if (isJSONreceived && Array.isArray(result)) {
-      result.forEach((doc, index) => {
-        if (index > 0) {
-          content.push(new Paragraph({ text: "", pageBreakBefore: false }));
-        }
+  //   if (isJSONreceived && Array.isArray(result)) {
+  //     result.forEach((doc, index) => {
+  //       if (index > 0) {
+  //         content.push(new Paragraph({ text: "", pageBreakBefore: false }));
+  //       }
 
-        if (doc.Description) {
-          content.push(
-            new Paragraph({
-              text: "Description",
-              heading: HeadingLevel.HEADING_1,
-            }),
-            new Paragraph({ text: doc.Description })
-          );
-        }
+  //       if (doc.Description) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "Description",
+  //             heading: HeadingLevel.HEADING_1,
+  //           }),
+  //           new Paragraph({ text: doc.Description })
+  //         );
+  //       }
 
-        if (doc.Functions && doc.Functions.length > 0) {
-          content.push(
-            new Paragraph({
-              text: "Functions",
-              heading: HeadingLevel.HEADING_1,
-              pageBreakBefore: true,
-            })
-          );
-          doc.Functions.forEach((func: { Name: string; Purpose: string }) => {
-            content.push(
-              new Paragraph({
-                text: func.Name,
-                heading: HeadingLevel.HEADING_2,
-              }),
-              new Paragraph({ text: func.Purpose })
-            );
-          });
-        }
+  //       if (doc.Functions && doc.Functions.length > 0) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "Functions",
+  //             heading: HeadingLevel.HEADING_1,
+  //             pageBreakBefore: true,
+  //           })
+  //         );
+  //         doc.Functions.forEach((func: { Name: string; Purpose: string }) => {
+  //           content.push(
+  //             new Paragraph({
+  //               text: func.Name,
+  //               heading: HeadingLevel.HEADING_2,
+  //             }),
+  //             new Paragraph({ text: func.Purpose })
+  //           );
+  //         });
+  //       }
 
-        if (doc.Queries && doc.Queries.length > 0) {
-          content.push(
-            new Paragraph({
-              text: "Queries",
-              heading: HeadingLevel.HEADING_1,
-              pageBreakBefore: true,
-            })
-          );
-          doc.Queries.forEach((query: string) => {
-            content.push(new Paragraph({ text: `• ${query}` }));
-          });
-        }
+  //       if (doc.Queries && doc.Queries.length > 0) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "Queries",
+  //             heading: HeadingLevel.HEADING_1,
+  //             pageBreakBefore: true,
+  //           })
+  //         );
+  //         doc.Queries.forEach((query: string) => {
+  //           content.push(new Paragraph({ text: `• ${query}` }));
+  //         });
+  //       }
 
-        if (doc.Dependencies && doc.Dependencies.length > 0) {
-          content.push(
-            new Paragraph({
-              text: "Dependencies",
-              heading: HeadingLevel.HEADING_1,
-              pageBreakBefore: true,
-            })
-          );
-          doc.Dependencies.forEach((dep: { Module: string; Purpose: string }) => {
-            content.push(
-              new Paragraph({
-                text: dep.Module,
-                heading: HeadingLevel.HEADING_2,
-              }),
-              new Paragraph({ text: dep.Purpose })
-            );
-          });
-        }
+  //       if (doc.Dependencies && doc.Dependencies.length > 0) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "Dependencies",
+  //             heading: HeadingLevel.HEADING_1,
+  //             pageBreakBefore: true,
+  //           })
+  //         );
+  //         doc.Dependencies.forEach((dep: { Module: string; Purpose: string }) => {
+  //           content.push(
+  //             new Paragraph({
+  //               text: dep.Module,
+  //               heading: HeadingLevel.HEADING_2,
+  //             }),
+  //             new Paragraph({ text: dep.Purpose })
+  //           );
+  //         });
+  //       }
 
-        if (doc.Improvements && doc.Improvements.length > 0) {
-          content.push(
-            new Paragraph({
-              text: "Potential Improvements",
-              heading: HeadingLevel.HEADING_1,
-              pageBreakBefore: true,
-            })
-          );
-          doc.Improvements.forEach((imp: { Improvement: string; Details: string }) => {
-            content.push(
-              new Paragraph({
-                text: imp.Improvement,
-                heading: HeadingLevel.HEADING_2,
-              }),
-              new Paragraph({ text: imp.Details })
-            );
-          });
-        }
+  //       if (doc.Improvements && doc.Improvements.length > 0) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "Potential Improvements",
+  //             heading: HeadingLevel.HEADING_1,
+  //             pageBreakBefore: true,
+  //           })
+  //         );
+  //         doc.Improvements.forEach((imp: { Improvement: string; Details: string }) => {
+  //           content.push(
+  //             new Paragraph({
+  //               text: imp.Improvement,
+  //               heading: HeadingLevel.HEADING_2,
+  //             }),
+  //             new Paragraph({ text: imp.Details })
+  //           );
+  //         });
+  //       }
 
-        if (doc.Flowchart && doc.Flowchart.length > 0) {
-          content.push(
-            new Paragraph({
-              text: "Flowchart",
-              heading: HeadingLevel.HEADING_1,
-              pageBreakBefore: true,
-            })
-          );
-          doc.Flowchart.forEach((flow: { Heading: any; Chart: any }) => {
-            content.push(
-              new Paragraph({
-                text: flow.Heading,
-                heading: HeadingLevel.HEADING_2,
-              }),
-              new Paragraph({ text: flow.Chart })
-            );
-          });
-        }
+  //       if (doc.Flowchart && doc.Flowchart.length > 0) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "Flowchart",
+  //             heading: HeadingLevel.HEADING_1,
+  //             pageBreakBefore: true,
+  //           })
+  //         );
+  //         doc.Flowchart.forEach((flow: { Heading: any; Chart: any }) => {
+  //           content.push(
+  //             new Paragraph({
+  //               text: flow.Heading,
+  //               heading: HeadingLevel.HEADING_2,
+  //             }),
+  //             new Paragraph({ text: flow.Chart })
+  //           );
+  //         });
+  //       }
 
-        if (doc["ER Diagram"] && doc["ER Diagram"].length > 0) {
-          content.push(
-            new Paragraph({
-              text: "ER Diagram",
-              heading: HeadingLevel.HEADING_1,
-              pageBreakBefore: true,
-            })
-          );
-          doc["ER Diagram"].forEach((er: { Heading: any; Chart: any }) => {
-            content.push(
-              new Paragraph({
-                text: er.Heading,
-                heading: HeadingLevel.HEADING_2,
-              }),
-              new Paragraph({ text: er.Chart })
-            );
-          });
-        }
-      });
-    } else {
-      content.push(
-        new Paragraph({
-          text: "Raw Documentation",
-          heading: HeadingLevel.HEADING_1,
-        }),
-        new Paragraph({ text: String(result) })
-      );
-    }
-    return content;
-  };
+  //       if (doc["ER Diagram"] && doc["ER Diagram"].length > 0) {
+  //         content.push(
+  //           new Paragraph({
+  //             text: "ER Diagram",
+  //             heading: HeadingLevel.HEADING_1,
+  //             pageBreakBefore: true,
+  //           })
+  //         );
+  //         doc["ER Diagram"].forEach((er: { Heading: any; Chart: any }) => {
+  //           content.push(
+  //             new Paragraph({
+  //               text: er.Heading,
+  //               heading: HeadingLevel.HEADING_2,
+  //             }),
+  //             new Paragraph({ text: er.Chart })
+  //           );
+  //         });
+  //       }
+  //     });
+  //   } else {
+  //     content.push(
+  //       new Paragraph({
+  //         text: "Raw Documentation",
+  //         heading: HeadingLevel.HEADING_1,
+  //       }),
+  //       new Paragraph({ text: String(result) })
+  //     );
+  //   }
+  //   return content;
+  // };
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
