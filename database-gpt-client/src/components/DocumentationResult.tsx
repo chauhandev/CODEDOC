@@ -35,7 +35,7 @@ interface DocumentationResultProps {
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
   const [isOpen, setIsOpen] = useState(true)
-
+  console.log(title,children)
   return (
     <div className="mb-4">
       <button
@@ -52,6 +52,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 }
 
 export const DocumentationResult: React.FC<DocumentationResultProps> = ({ documentation, isJSONreceived }) => {
+  console.log(documentation)
   const renderContent = () => {
     if (isJSONreceived && Array.isArray(documentation)) {
       return (
@@ -68,7 +69,7 @@ export const DocumentationResult: React.FC<DocumentationResultProps> = ({ docume
                 <Section title="Functions">
                   {doc.Functions.map((func, funcIndex) => (
                     <div key={funcIndex} className="mb-4">
-                      <h5 className="font-semibold">{func.Name}</h5>
+                      <h5 className="font-bold text-blue-400">{func.Name}</h5>
                       <p className="whitespace-pre-wrap">{func.Purpose}</p>
                     </div>
                   ))}
@@ -91,7 +92,7 @@ export const DocumentationResult: React.FC<DocumentationResultProps> = ({ docume
                 <Section title="Dependencies">
                   {doc.Dependencies.map((dep, depIndex) => (
                     <div key={depIndex} className="mb-2">
-                      <h4 className="font-semibold">{dep.Module}</h4>
+                      <h4 className="font-bold text-blue-400">{dep.Module}</h4>
                       <p>{dep.Purpose}</p>
                     </div>
                   ))}
@@ -102,7 +103,7 @@ export const DocumentationResult: React.FC<DocumentationResultProps> = ({ docume
                 <Section title="Potential Improvements">
                   {doc.Improvements.map((imp, impIndex) => (
                     <div key={impIndex} className="mb-2">
-                      <h4 className="font-semibold">{imp.Improvement}</h4>
+                      <h4 className="font-bold text-blue-400">{imp.Improvement}</h4>
                       <p className="whitespace-pre-wrap">{imp.Details}</p>
                     </div>
                   ))}
@@ -113,7 +114,7 @@ export const DocumentationResult: React.FC<DocumentationResultProps> = ({ docume
                 <Section title="Flowchart">
                   {doc.Flowchart.map((flow, flowIndex) => (
                     <div key={flowIndex} className="mb-2">
-                      <h4 className="font-semibold">{flow.Heading}</h4>
+                      <h4 className="font-bold text-blue-400">{flow.Heading}</h4>
                       <FlowChart
                         chartDefinition={flow.Chart.replace(/```mermaid\n|\n```/g, "").replace(/mermaid\n|\n```/g, "")}
                       />
@@ -126,7 +127,7 @@ export const DocumentationResult: React.FC<DocumentationResultProps> = ({ docume
                 <Section title="ER Diagram">
                   {doc["ER Diagram"].map((er, erIndex) => (
                     <div key={erIndex} className="mb-2">
-                      <h4 className="font-semibold">{er.Heading}</h4>
+                      <h4 className="font-bold text-blue-400">{er.Heading}</h4>
                       <FlowChart
                         chartDefinition={er.Chart.replace(/```mermaid\n|\n```/g, "").replace(/mermaid\n|\n```/g, "")}
                       />

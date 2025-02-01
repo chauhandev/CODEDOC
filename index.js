@@ -8,13 +8,15 @@ const {fetchRepository} = require('./fetchFromGit.js');
 dotenv.config();
 const path = require('path');
 const fs = require('fs');
-const { pathExists } = require('fs-extra');
 const app = express();
 const port = process.env.PORT || 5000;
 const repoUrl = 'https://github.com/your-username/your-repo.git';
+const fileUpload = require('express-fileupload');
+
 
 app.use(cors());
 app.use(express.json());
+app.use(fileUpload());
 
 const dbConfig = {
     server: process.env.SQL_SERVER,
@@ -28,7 +30,7 @@ const dbConfig = {
 };
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-thinking-exp-01-21" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
 async function getDatabaseSchema() {
     let pool;
@@ -119,9 +121,9 @@ app.post('/query', async (req, res) => {
 });
 
 app.post('/generalquery', async (req, res) => {
-    const { naturalLanguageQuery } = req.body;
-    if (!naturalLanguageQuery) {
-        return res.status(400).send("Bad request: no query was provided.");
+    const { messages, userPrompt } = req.body;
+    if (!userPrompt) {
+        return res.status(400).send("Bad request: no prompt was provided.");
     }
 
     // Set headers for streaming
@@ -129,14 +131,26 @@ app.post('/generalquery', async (req, res) => {
     res.setHeader('Transfer-Encoding', 'chunked');
 
     try {
-        const prompt = `${naturalLanguageQuery}`;
+        const prompt = `This is the previous conversation between user and assistant (You are the assistant)
+             ${JSON.stringify(messages)} 
+            1) Provide a response to the user's query analyzing the previous conversation between the user and assistant (YOU).
+            2) The user's new query is: ${userPrompt}
+            3) The response should be based on the previous conversation but should not explicitly mention it.
+            4) Provide the response as if it was asked to you directly in markdown format.`;
+
         const result = await model.generateContentStream(prompt);
-        
+
+        // Stream the response in smaller chunks
         for await (const chunk of result.stream) {
             const text = chunk.text();
-            res.write(text);
+            // Split the text into smaller chunks (e.g., word by word or sentence by sentence)
+            const words = text.split(' ');
+            for (const word of words) {
+                res.write(word + ' '); // Send each word with a space
+                await new Promise(resolve => setTimeout(resolve, 50)); // Add a small delay for effect
+            }
         }
-        
+
         res.end();
     } catch (error) {
         console.error("Gemini API Error: ", error);
@@ -147,140 +161,161 @@ app.post('/generalquery', async (req, res) => {
     }
 });
 
-app.get('/generateDocument', async (req, res) => {
-    try {
-        const gitRepo = req.query.gitRepo;
-        await fetchRepository(gitRepo,projectPath);
-        const fileName = outputFileName+Date.now()+".md";
-        await generateProjectDocumentation(projectPath, customSystemMessage, fileName);
-        const filePath = path.join(projectPath, fileName);
-        return res.sendFile(filePath);     
-    } catch (error) {
-        console.error("Error generating document ", error);
-        return res.status(500).json({ error: "Internal server error." });
-    }
-       
-});
-
 app.post('/generateDocument', async (req, res) => {
     try {
-            const { fileContent , userPrompt} = req.body;
+        const { fileContent, userPrompt } = req.body;
+
+        // Validate file content
         if (!fileContent) {
             return res.status(400).send("Bad request: no content provided");
         }
-        let extension = ".md";
 
-        if(userPrompt){
-            extension =  await getExtensionAsPerUserPrompt(userPrompt);
+        // Determine file extension based on user prompt (default to .md)
+        let extension = ".md";
+        if (userPrompt) {
+            extension = await getExtensionAsPerUserPrompt(userPrompt);
             extension = extension.trim();
         }
-        const fileData= {
-            filePath: "UserInput",
+
+        // Prepare file data for documentation
+        const fileData = {
+            filePath: "UserInput" + extension,
             relativePath: "UserInput",
             content: fileContent,
-        }
-        const fileDoc = await generateFileDocumentation(fileData.filePath, fileData.content, customSystemMessage,userPrompt,true);
+        };
+
+        // Generate documentation
+        const fileDoc = await generateFileDocumentation(fileData.filePath, fileData.content, null, userPrompt, true);
         const fileDocUpdated = fileDoc.replace(/```json|```/g, '').trim();
 
-        return res.send(fileDocUpdated);    
+        // Send the response
+        return res.send(fileDocUpdated);
     } catch (error) {
-        console.error("Error generating document ", error);
+        console.error("Error generating document: ", error);
         return res.status(500).json({ error: "Internal server error." });
     }
-    
 });
 
-async function getExtensionAsPerUserPrompt(userPrompt){
+app.post('/convert', async (req, res) => {
+    try {
+      if (!req.files || !req.files.pdf) {
+        return res.status(400).send('No PDF file uploaded.');
+      }
+  
+      // Get the uploaded PDF file
+      const pdfFile = req.files.pdf;
+  
+      // Convert PDF to DOCX (example using pdf2docx)
+    //   const docxBuffer = await convert(pdfFile.data);
+  
+    //   // Send the DOCX file back to the client
+    //   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    //   res.setHeader('Content-Disposition', 'attachment; filename=converted.docx');
+    //   res.send(docxBuffer);
+    } catch (error) {
+      console.error('Error during conversion:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+  
+/**
+ * Determines the file extension based on the user prompt.
+ */
+async function getExtensionAsPerUserPrompt(userPrompt) {
     const defaultSystemMessage = `Identify the file extension of the given content.`;
     const prompt = `
     ${defaultSystemMessage}
     
-    Please analyze the following content and provide the file extension only the extension nothing else. Like .md, .txt, .js ,.docx,.ppt etc.
+    Please analyze the following content and provide ONLY the file extension (e.g., .md, .txt, .js, .docx, .ppt, etc.).
     
     ${userPrompt}
     `;
+
     try {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         return text;
-      } catch (error) {
+    } catch (error) {
         console.error(`Error fetching file extension:`, error);
-        return `Error fetching file extension.`;
-      }
-
+        return `.md`; // Default to .md if there's an error
+    }
 }
-// Function to generate documentation using Gemini
-async function generateFileDocumentation(filePath, fileContent, customSystemMessage = null ,userPrompt, singleFile = false) {
 
+/**
+ * Generates documentation for a file using AI.
+ */
+async function generateFileDocumentation(filePath, fileContent, customSystemMessage = null, userPrompt, singleFile = false) {
     const systemInstruction = "You are a helpful assistant specialized in analyzing source code and generating detailed technical documentation.";
-   
-    const defaultSystemMessage = `You are a helpful assistant specialized in analyzing source code and generating documentation in the format as asked by user.`;
-
+    const defaultSystemMessage = `You are a helpful assistant specialized in analyzing source code and generating documentation in the format requested by the user.`;
     const systemMessage = customSystemMessage || defaultSystemMessage;
 
-    let documentFormatPrompt  = `
-     Include the following in your documentation:
-    1. A brief description of what the code does
-    2. Any important functions or classes and their purposes
-    2. Any important queies and their purposes
-    3. Any notable dependencies or imports
-    4. Any potential improvements or best practices that could be applied
-    5. Any flow chart to represent the functionality (Mermaid flow chart and make sure to not use parantheses).
-    6. Any ER diagram to represent the database schema (Mermaid ER Diagram and make sure to not use parantheses).
-    6. Document should be well structured and easy to understand.
-    7. No other information should be included in the documentation.
-    8. Copying pasting the response should be enough to get the documentation. 
-    `
-    if(singleFile)
-        documentFormatPrompt += `9. Please provide the documentation in strictly in JSON format with key as the Headinng and value as the content. Provide content in following structure 
+    // Define the documentation format prompt
+    let documentFormatPrompt = `
+        Include the following in your documentation:
+        1. A brief description of what the code does.
+        2. Any important functions or classes and their purposes.
+        3. Any important queries and their purposes including queries used if present.
+        4. Any notable dependencies or imports.
+        5. Any potential improvements or best practices that could be applied.
+        6. A flowchart to represent the functionality (Mermaid flow chart, without parentheses) ONLY if applicable.
+        7. An ER diagram to represent the database schema (Mermaid ER Diagram, without parentheses) ONLY if applicable.
+        8. The document should be well-structured and easy to understand.
+        9. No irrelevant information should be included in the documentation.
+        10. Copying and pasting the response should be sufficient to get the documentation.
+    `;
+
+    // Add JSON format instructions for single-file documentation
+    if (singleFile) {
+        documentFormatPrompt += `
+        11. Provide the documentation strictly in JSON format with the following structure:
         
         interface Documentation {
-        Description?: string;
-        Functions?: Array<{
-            Name: string;
-            Purpose: string;
-        }>;
-        Queries?: Array<string>;
-        Dependencies?: Array<{
-            Module: string;
-            Purpose: string;
-        }>;
-        Improvements?: Array<{
-            Improvement: string;
-            Details: string;
-        }>;
-        Flowchart?:  Array<{
-            Heading: string;
-            Chart: string;
-        }>;
-        "ER Diagram"?: Array<{
-            Heading: string;
-            Chart: string;
-        }>;
+            Description?: string;
+            Functions?: Array<{
+                Name: string;
+                Purpose: string;
+            }>;
+            Queries?: Array<string>;
+            Dependencies?: Array<{
+                Module: string;
+                Purpose: string;
+            }>;
+            Improvements?: Array<{
+                Improvement: string;
+                Details: string;
+            }>;
+            Flowchart?: Array<{
+                Heading: string;
+                Chart: string;
+            }>;
+            "ER Diagram"?: Array<{
+                Heading: string;
+                Chart: string;
+            }>;
         }
-        If there is no Flowchart or ER Diagram then you can provide empty array for them.
-        `   
-    
+        `;
+    }
+
+    // Construct the final prompt for the AI
     const prompt = `
     ${systemInstruction}
-    Please analyze the following ${path.extname(filePath)} code and provide a brief documentation:
+    Please analyze the following ${path.extname(filePath)} code and provide a detailed documentation:
     ${fileContent}
     ${documentFormatPrompt}
     ${userPrompt}
-  `;
+    `;
 
     try {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         return text;
-      } catch (error) {
+    } catch (error) {
         console.error(`Error generating documentation for ${filePath}:`, error);
         return `Error generating documentation.`;
-      }
+    }
 }
-
 
 // Main function to handle full documentation generation
 async function generateProjectDocumentation(projectPath, customSystemMessage = null, outputFileName = 'PROJECT_DOCUMENTATION.md') {
@@ -309,11 +344,6 @@ const documentPath = path.join(__dirname, 'DocumentationRepo');
 const customSystemMessage = process.env.CUSTOM_SYSTEM_MESSAGE; // sOptional custom system message
 const outputFileName = process.env.OUTPUT_FILE_NAME || 'PROJECT_DOCUMENTATION';
 
-async function main() {
-  console.log('Starting documentation generation...');
-  await generateProjectDocumentation(projectPath, customSystemMessage, outputFileName);
-  console.log('Documentation process completed.');
-}
 
 // main();
 

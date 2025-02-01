@@ -12,12 +12,12 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
    if (Array.isArray(results) && results.every(item => typeof item === 'object' && item !== null)) {
       const headers = Object.keys(results[0]);
         return (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto text-white m-3">
             <table className="table-auto w-full border-collapse border border-gray-300">
                 <thead className="bg-gray-100">
                     <tr>
                     {headers.map((header) => (
-                        <th key={header} className="border border-gray-300 px-4 py-2 text-left">
+                        <th key={header} className="border border-gray-300 px-4 py-2 text-left text-gray-950">
                         {header}
                         </th>
                     ))}
