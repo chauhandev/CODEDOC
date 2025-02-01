@@ -1,11 +1,15 @@
 {
-  "name": "databsegpt",
+  "name": "database-gpt",
+  "private": true,
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Database GPT - Full Stack Application",
+  "type": "module",
   "scripts": {
-    "start": "node index.js",
-     "dev":"vite"
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "build": "cd client && vite build",
+    "start": "node server/index.js",
+    "dev": "concurrently \"cd client && vite\" \"cd server && nodemon index.js\""
   },
   "author": "",
   "license": "ISC",
@@ -31,7 +35,22 @@
     "simple-git": "^3.27.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/file-saver": "^2.0.7",
     "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5"
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "nodemon": "^3.1.0",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^6.0.5"
   }
 }

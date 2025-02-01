@@ -32,7 +32,7 @@ function CodeDocPage() {
   const handleGithubSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await generateDocumentation(
-      `http://localhost:5000/generateDocument?gitRepo=${encodeURIComponent(
+      `generateDocument?gitRepo=${encodeURIComponent(
         githubUrl
       )}`
     );
@@ -43,7 +43,7 @@ function CodeDocPage() {
     if (!file) return;
 
     const fileContent = await file.text();
-    await generateDocumentation("http://localhost:5000/generateDocument", {
+    await generateDocumentation("/generateDocument", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -64,7 +64,7 @@ function CodeDocPage() {
     e.preventDefault();
     if (!codeInput.trim()) return;
 
-    await generateDocumentation("http://localhost:5000/generateDocument", {
+    await generateDocumentation("/generateDocument", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -237,7 +237,7 @@ function CodeDocPage() {
       const formData = new FormData();
       formData.append('pdf', pdfBlob, 'document.pdf'); 
       // Send the FormData to the server
-      const response = await fetch('http://localhost:5000/convert', {
+      const response = await fetch('/convert', {
         method: 'POST',
         body: formData,
       });

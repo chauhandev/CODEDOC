@@ -1,22 +1,26 @@
-const express = require('express');
-const sql = require('mssql');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const {createProjectDocumentationStructure} = require('./generateDocument.js');
-const {fetchRepository} = require('./fetchFromGit.js');
-dotenv.config();
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import sql from 'mssql'
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import createProjectDocumentationStructure from './generateDocument.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
 const app = express();
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.join(__dirname, "public");
+
+app.use(express.static(clientDistPath));
+
+
 const port = process.env.PORT || 5000;
-const repoUrl = 'https://github.com/your-username/your-repo.git';
-const fileUpload = require('express-fileupload');
-
-
 app.use(cors());
 app.use(express.json());
-app.use(fileUpload());
 
 const dbConfig = {
     server: process.env.SQL_SERVER,
@@ -97,6 +101,10 @@ async function generateSqlQuery(naturalLanguageQuery) {
         return null;
     }
 }
+app.get("*", (req, res) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
+});
+
 app.post('/query', async (req, res) => {
     const { naturalLanguageQuery } = req.body;
     if (!naturalLanguageQuery) {

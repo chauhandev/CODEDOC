@@ -16,5 +16,4 @@ async function fetchRepository(repoUrl, localPath) {
       console.error('Error fetching repository:', error);
     }
   }
-
-module.exports = { fetchRepository };
+export default fetchRepository;

@@ -1,6 +1,6 @@
 // generateDocument.js
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path'
 
 // Function to read file contents
 async function readFile(filePath) {
@@ -56,5 +56,4 @@ async function createProjectDocumentationStructure(projectPath) {
 
   return documentation;
 }
-
-module.exports = { createProjectDocumentationStructure };
+export default createProjectDocumentationStructure;

@@ -35,7 +35,7 @@ function ChatPage() {
         content: msg.content,
       }));
 
-      const response = await fetch('http://localhost:5000/generalquery', {
+      const response = await fetch('/generalquery', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -16,7 +16,7 @@ const DatabaseQueryPage: React.FC = () => {
     setResults(null);
     try {
       setLoading(true);
-      const response = await axios.post('http://localhost:5000/query', { naturalLanguageQuery });
+      const response = await axios.post('/query', { naturalLanguageQuery });
       setResults(response.data);
     } catch (err: any) {
       console.error('Error fetching data:', err);
