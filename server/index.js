@@ -7,7 +7,7 @@ import createProjectDocumentationStructure from './generateDocument.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-
+import  { Document, Packer, Paragraph, TextRun } from 'docx';
 const app = express();
 dotenv.config();
 
@@ -223,6 +223,78 @@ app.post('/convert', async (req, res) => {
     } catch (error) {
       console.error('Error during conversion:', error);
       res.status(500).send('Internal Server Error');
+    }
+  });
+  
+  
+app.post("/getDocx", async (req, res) => {
+    try {
+      const { fileContent, jsonStructure, userPrompt } = req.body;
+  
+      if (!fileContent && !jsonStructure) {
+        return res.status(400).json({ error: "Missing required parameters" });
+      }
+  
+      // Ensure output directory exists
+      const outputDir = path.join(process.cwd(), "output");
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+  
+      // Construct AI Prompt
+      const documentPrompt = `
+      You are a **Expert technical document writer**.\n\n
+      Generate a detailed **technical design document** for the given code json structure.
+      Output should be a structured document where there will be Heading paragraphs section bullets wheerever requierd.
+      
+      - **JSON Structure:** \n${jsonStructure}\n\n\n
+        You can use fileContent to get the required information if JSON structure is not sufficient enough
+      - **Code:** \n${fileContent}\n
+
+      - **User Input:** \n${userPrompt || "No additional instructions"}
+    `;
+  
+      // Call AI Model to generate content
+      const result = await model.generateContent(documentPrompt);
+      const response = await result.response;
+      const docContent = response.text().trim();
+  
+      if (!docContent) {
+        throw new Error("AI Model returned empty content");
+      }
+  
+      // Create DOCX Document
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: docContent, break: 1 })],
+              }),
+            ],
+          },
+        ],
+      });
+  
+      // Save DOCX File
+      const filePath = path.join(outputDir, "Technical_Design_Document.docx");
+      const buffer = await Packer.toBuffer(doc);
+      fs.writeFileSync(filePath, buffer);
+  
+      // Send DOCX File
+      res.attachment("Technical_Design_Document.docx").send(buffer);
+  
+      // Delete file after sending
+      setTimeout(() => {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }, 5000); // Delay to ensure file is sent before deletion
+  
+    } catch (error) {
+      console.error("Error generating DOCX:", error);
+      res.status(500).json({ error: "Failed to generate DOCX" });
     }
   });
   

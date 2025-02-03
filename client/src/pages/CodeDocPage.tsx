@@ -8,6 +8,7 @@ import {
   Copy,
   Check,
   Download,
+  ChevronDown,
 } from "lucide-react";
 import { DocumentationResult } from "../components/DocumentationResult";
 // @ts-ignores
@@ -114,114 +115,11 @@ function CodeDocPage() {
     }
   };
 
-  // const handleDownload = async (format: "html" | "pdf" | "docx") => {
-  //   if (!contentRef.current) return;
-  
-  //   if (format === "html") {
-  //     const htmlContent = contentRef.current.innerHTML;
-  //     const blob = new Blob([htmlContent], { type: "text/html" });
-  //     const link = document.createElement("a");
-  //     link.href = URL.createObjectURL(blob);
-  //     link.download = "documentation.html";
-  //     link.click();
-  //   } else if (format === "pdf") {
-  //     const element = contentRef.current;
-  //     const clonedElement = element.cloneNode(true);
-  
-  //     // Apply styles for PDF
-  //     const applyStylesRecursively = (el: Node) => {
-  //       if (el instanceof HTMLElement) {
-  //         el.style.backgroundColor = "#ffffff";
-  //         el.style.color = "#000000";
-  //         el.style.pageBreakInside = "avoid";
-  //         el.style.overflow = "visible";
-  //         el.style.fontFamily = "Arial, sans-serif"; // Ensure consistent font
-  //         el.style.lineHeight = "1.5"; // Improve readability
-  //         el.style.marginBottom = "4px"; // Add margin for better spacing
-  //       }
-  
-  //       for (let child of (el as HTMLElement).children) {
-  //         applyStylesRecursively(child);
-  //       }
-  //     };
-  
-  //     applyStylesRecursively(clonedElement);
-  
-  //     const options = {
-  //       margin: 0,
-  //       filename: "documentation.pdf",
-  //       html2canvas: {
-  //         backgroundColor: "#ffffff",
-  //         foregroundColor: "#000000",
-  //         scale: 1.5,
-  //         useCORS: true,
-  //       },
-  //       jsPDF: {
-  //         unit: "mm",
-  //         format: "a4",
-  //         orientation: "portrait",
-  //       },
-  //     };
-  
-  //     html2pdf().from(clonedElement).set(options).save("documentation.pdf");
-  //   } else if (format === "docx") {
-  //     const docxContent = generateDocxContent();
-  //     const doc = new Document({
-  //       sections: [{ children: docxContent }],
-  //     });
-  
-  //     const blob = await Packer.toBlob(doc);
-  //     saveAs(blob, "documentation.docx");
-  //   }
-  // };
-
   const handleDownload = async (format: "html" | "pdf" | "docx") => {
     if (!contentRef.current) return;
   
     // Common PDF generation logic
-    const generatePdfBlob = async () => {
-      const element = contentRef.current;
-      if (!element) return;
-      const clonedElement = element.cloneNode(true);
-  
-      // Apply PDF styles
-      const applyStylesRecursively = (el: Node) => {
-        if (el instanceof HTMLElement) {
-          el.style.backgroundColor = "#ffffff";
-          el.style.color = "#000000";
-          el.style.pageBreakInside = "avoid";
-          el.style.overflow = "visible";
-          el.style.fontFamily = "Arial, sans-serif";
-          el.style.lineHeight = "1.5";
-          el.style.margin = "5px";
-        }
-        for (let child of (el as HTMLElement).children) {
-          applyStylesRecursively(child);
-        }
-      };
-  
-      applyStylesRecursively(clonedElement);
-  
-      const options = {
-        margin: 0,
-        html2canvas: {
-          backgroundColor: "#ffffff",
-          foregroundColor: "#000000",
-          scale: 1.5,
-          useCORS: true,
-        },
-        jsPDF: {
-          unit: "mm",
-          format: "a4",
-          orientation: "portrait",
-        },
-      };
-  
-      return html2pdf()
-        .from(clonedElement)
-        .set(options)
-        .outputPdf("blob");
-    };
+    
   
     if (format === "html") {
       // HTML handling remains the same
@@ -229,167 +127,122 @@ function CodeDocPage() {
       const blob = new Blob([htmlContent], { type: "text/html" });
       saveAs(blob, "documentation.html");
     } else if (format === "pdf") {
-      // Direct PDF download
+      // Direct PDF download      
       const pdfBlob = await generatePdfBlob();
       saveAs(pdfBlob, "documentation.pdf");
     } else if (format === "docx") {
-      const pdfBlob = await generatePdfBlob();
-      const formData = new FormData();
-      formData.append('pdf', pdfBlob, 'document.pdf'); 
-      // Send the FormData to the server
-      const response = await fetch('/convert', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload PDF');
+      try {
+        let fileContent = "";
+    
+        if (file) {
+          fileContent = await file.text(); // Use file content if available
+        } else if (codeInput.trim()) {
+          fileContent = codeInput; // Use user input if file is not present
+        } else {
+          return; // Exit if both are empty
+        }
+    
+        const response = await fetch("/getDocx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonStructure: JSON.stringify(result), // JSON Representation
+            fileContent, // Processed Content
+            userPrompt: "", // Optional Prompt
+          }),
+        });
+    
+        if (!response.ok) throw new Error("Failed to generate DOCX");
+    
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Technical_Design_Document.docx";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    
+      } catch (error) {
+        console.error("Download Error:", error);
       }
+    }
+    
+    
+  };
 
-      // Handle the response (e.g., download the converted file)
-      const resultBlob = await response.blob();
-      saveAs(resultBlob, 'converted.docx'); // Save the converted file
+  const generatePdfBlob = async () => {
+    const element = contentRef.current;
+    if (!element) return;
+    const clonedElement = element.cloneNode(true);
+
+    // Apply PDF styles
+    const applyStylesRecursively = (el: Node) => {
+      if (el instanceof HTMLElement) {
+        el.style.backgroundColor = "#ffffff";
+        el.style.color = "#000000";
+        el.style.pageBreakInside = "avoid";
+        el.style.overflow = "visible";
+        el.style.fontFamily = "Arial, sans-serif";
+        el.style.lineHeight = "1.5";
+        el.style.marginBottom = "5px";
+      }
+      for (let child of (el as HTMLElement).children) {
+        applyStylesRecursively(child);
+      }
+    };
+
+    applyStylesRecursively(clonedElement);
+
+    const options = {
+      margin: 0,
+      html2canvas: {
+        backgroundColor: "#ffffff",
+        foregroundColor: "#000000",
+        scale: 1.5,
+        useCORS: true,
+      },
+      jsPDF: {
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+      },
+    };
+
+    return html2pdf()
+      .from(clonedElement)
+      .set(options)
+      .outputPdf("blob");
+  };
+
+
+  const [selectedAction, setSelectedAction] = useState("");
+
+  const handleAction = (action:any) => {
+    setSelectedAction(""); 
+    switch (action) {
+      case "copy":
+        handleCopy();
+        break;
+      case "pdf":
+        handleDownload("pdf");
+        break;
+      case "docx":
+        handleDownload("docx");
+        break;
+      case "html":
+        handleDownload("html");
+        break;
+      default:
+        break;
     }
   };
 
-  // const generateDocxContent = () => {
-  //   const content: any[] = [];
-
-  //   if (isJSONreceived && Array.isArray(result)) {
-  //     result.forEach((doc, index) => {
-  //       if (index > 0) {
-  //         content.push(new Paragraph({ text: "", pageBreakBefore: false }));
-  //       }
-
-  //       if (doc.Description) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "Description",
-  //             heading: HeadingLevel.HEADING_1,
-  //           }),
-  //           new Paragraph({ text: doc.Description })
-  //         );
-  //       }
-
-  //       if (doc.Functions && doc.Functions.length > 0) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "Functions",
-  //             heading: HeadingLevel.HEADING_1,
-  //             pageBreakBefore: true,
-  //           })
-  //         );
-  //         doc.Functions.forEach((func: { Name: string; Purpose: string }) => {
-  //           content.push(
-  //             new Paragraph({
-  //               text: func.Name,
-  //               heading: HeadingLevel.HEADING_2,
-  //             }),
-  //             new Paragraph({ text: func.Purpose })
-  //           );
-  //         });
-  //       }
-
-  //       if (doc.Queries && doc.Queries.length > 0) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "Queries",
-  //             heading: HeadingLevel.HEADING_1,
-  //             pageBreakBefore: true,
-  //           })
-  //         );
-  //         doc.Queries.forEach((query: string) => {
-  //           content.push(new Paragraph({ text: `• ${query}` }));
-  //         });
-  //       }
-
-  //       if (doc.Dependencies && doc.Dependencies.length > 0) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "Dependencies",
-  //             heading: HeadingLevel.HEADING_1,
-  //             pageBreakBefore: true,
-  //           })
-  //         );
-  //         doc.Dependencies.forEach((dep: { Module: string; Purpose: string }) => {
-  //           content.push(
-  //             new Paragraph({
-  //               text: dep.Module,
-  //               heading: HeadingLevel.HEADING_2,
-  //             }),
-  //             new Paragraph({ text: dep.Purpose })
-  //           );
-  //         });
-  //       }
-
-  //       if (doc.Improvements && doc.Improvements.length > 0) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "Potential Improvements",
-  //             heading: HeadingLevel.HEADING_1,
-  //             pageBreakBefore: true,
-  //           })
-  //         );
-  //         doc.Improvements.forEach((imp: { Improvement: string; Details: string }) => {
-  //           content.push(
-  //             new Paragraph({
-  //               text: imp.Improvement,
-  //               heading: HeadingLevel.HEADING_2,
-  //             }),
-  //             new Paragraph({ text: imp.Details })
-  //           );
-  //         });
-  //       }
-
-  //       if (doc.Flowchart && doc.Flowchart.length > 0) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "Flowchart",
-  //             heading: HeadingLevel.HEADING_1,
-  //             pageBreakBefore: true,
-  //           })
-  //         );
-  //         doc.Flowchart.forEach((flow: { Heading: any; Chart: any }) => {
-  //           content.push(
-  //             new Paragraph({
-  //               text: flow.Heading,
-  //               heading: HeadingLevel.HEADING_2,
-  //             }),
-  //             new Paragraph({ text: flow.Chart })
-  //           );
-  //         });
-  //       }
-
-  //       if (doc["ER Diagram"] && doc["ER Diagram"].length > 0) {
-  //         content.push(
-  //           new Paragraph({
-  //             text: "ER Diagram",
-  //             heading: HeadingLevel.HEADING_1,
-  //             pageBreakBefore: true,
-  //           })
-  //         );
-  //         doc["ER Diagram"].forEach((er: { Heading: any; Chart: any }) => {
-  //           content.push(
-  //             new Paragraph({
-  //               text: er.Heading,
-  //               heading: HeadingLevel.HEADING_2,
-  //             }),
-  //             new Paragraph({ text: er.Chart })
-  //           );
-  //         });
-  //       }
-  //     });
-  //   } else {
-  //     content.push(
-  //       new Paragraph({
-  //         text: "Raw Documentation",
-  //         heading: HeadingLevel.HEADING_1,
-  //       }),
-  //       new Paragraph({ text: String(result) })
-  //     );
-  //   }
-  //   return content;
-  // };
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const toggleDropdown = () => {
+    setIsDropdownVisible((prev) => !prev);
+  };
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
@@ -505,46 +358,46 @@ function CodeDocPage() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Generated Documentation</h3>
-                <div className="flex gap-2">
-                   <button
-                    onClick={() => setisDocumentGenerated(false)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-                   >
-                    <FileCode2 size={20} />
-                    <span>Generate Another</span>
-                  </button>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-                    title="Copy to clipboard"
+                <div className="flex gap-2 items-center">
+                {/* Generate Another Button */}
+                <button
+                  onClick={() => setisDocumentGenerated(false)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                >
+                  <FileCode2 size={20} />
+                  <span>Generate Another</span>
+                </button>
+
+                {/* Dropdown for Other Actions */}
+                <div className="relative">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                  onClick={toggleDropdown}
+                >
+                  <ChevronDown size={18} />
+                  <span>Actions</span>
+                </button>
+                {isDropdownVisible && (
+                  <select
+                    className="absolute top-full left-0 w-40 bg-gray-700 text-white mt-1 rounded-md shadow-md"
+                    value={selectedAction}
+                    onChange={(e) => handleAction(e.target.value)}
                   >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4 text-green-400" />
-                        <span className="text-sm">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        <span className="text-sm">Copy</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleDownload("pdf")}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-                  >
-                    <Download size={20} />
-                    <span>Download PDF</span>
-                  </button>
-                  <button
-                    onClick={() => handleDownload("docx")}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-                  >
-                    <Download size={20} />
-                    <span>Download DOCX</span>
-                  </button>
-                </div>
+                    <option value="copy">📋 Copy to Clipboard</option>
+                    <option value="pdf">📄 Download PDF</option>
+                    <option value="docx">📃 Download DOCX</option>
+                    <option value="html">🌐 Download HTML</option>
+                  </select>
+                )}
+              </div>
+
+                {/* Copied Feedback */}
+                {copied && (
+                  <div className="absolute top-12 left-0 bg-gray-800 text-green-400 px-2 py-1 rounded-md text-sm">
+                    Copied!
+                  </div>
+                )}
+              </div>
               </div>
               <div ref={contentRef}>
                 <DocumentationResult
