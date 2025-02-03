@@ -10,7 +10,7 @@ node_modules/
 # Ignore build directories
 dist/
 build/
-public/
+server/public/
 
 # Ignore temporary files
 *.tmp

@@ -377,19 +377,37 @@ function CodeDocPage() {
                   <ChevronDown size={18} />
                   <span>Actions</span>
                 </button>
+
                 {isDropdownVisible && (
-                  <select
-                    className="absolute top-full left-0 w-40 bg-gray-700 text-white mt-1 rounded-md shadow-md"
-                    value={selectedAction}
-                    onChange={(e) => handleAction(e.target.value)}
-                  >
-                    <option value="copy">📋 Copy to Clipboard</option>
-                    <option value="pdf">📄 Download PDF</option>
-                    <option value="docx">📃 Download DOCX</option>
-                    <option value="html">🌐 Download HTML</option>
-                  </select>
+                  <ul className="absolute top-full left-0 w-40 bg-gray-700 text-white mt-1 rounded-md shadow-md">
+                    <li
+                      className="px-4 py-2 hover:bg-gray-600 cursor-pointer"
+                      onClick={() => handleAction('copy')}
+                    >
+                      📋 Copy to Clipboard
+                    </li>
+                    <li
+                      className="px-4 py-2 hover:bg-gray-600 cursor-pointer"
+                      onClick={() => handleAction('pdf')}
+                    >
+                      📄 Download PDF
+                    </li>
+                    <li
+                      className="px-4 py-2 hover:bg-gray-600 cursor-pointer"
+                      onClick={() => handleAction('docx')}
+                    >
+                      📃 Download Docx
+                    </li>
+                    <li
+                      className="px-4 py-2 hover:bg-gray-600 cursor-pointer"
+                      onClick={() => handleAction('html')}
+                    >
+                      🌐 Download HTML
+                    </li>
+                  </ul>
                 )}
               </div>
+
 
                 {/* Copied Feedback */}
                 {copied && (
