@@ -264,18 +264,7 @@ app.post("/getDocx", async (req, res) => {
       }
   
       // Create DOCX Document
-      const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            children: [
-              new Paragraph({
-                children: [new TextRun({ text: docContent, break: 1 })],
-              }),
-            ],
-          },
-        ],
-      });
+      const doc = convertMarkdownToDocx(docContent);
   
       // Save DOCX File
       const filePath = path.join(outputDir, "Technical_Design_Document.docx");
@@ -298,6 +287,125 @@ app.post("/getDocx", async (req, res) => {
     }
   });
   
+
+function convertMarkdownToDocx(content) {
+    const paragraphs = [];
+    const lines = content.split(/\n+/); 
+
+    let currentParagraph = new Paragraph();
+    let isInList = false;
+    let listItems = [];
+    let isInCodeBlock = false;
+    let currentCodeBlock = [];
+
+    let inHeading = false;
+    let headingContent = '';
+    
+    lines.forEach((line, index) => {
+        // Handle Headings (##)
+        if (line.startsWith('## ')) {
+            // If there's already a heading and content, close the current paragraph
+            if (currentParagraph.children.length > 0) {
+                paragraphs.push(currentParagraph);
+                currentParagraph = new Paragraph();
+            }
+
+            const headingText = line.slice(3).trim();
+            const headingLevel = line.indexOf(' ') === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+            paragraphs.push(new Paragraph({
+                heading: headingLevel,
+                children: [new TextRun(headingText)],
+            }));
+
+            inHeading = true;
+            isInList = false;
+            listItems = [];
+            return;
+        }
+
+        // Handle List items (either ordered or unordered)
+        if (line.match(/^(\*|\-|\d+\.)\s/)) {
+            if (!isInList) {
+                isInList = true;
+                listItems = [];
+            }
+
+            listItems.push(new ListItem({
+                children: [new TextRun(line.replace(/^(\*|\-|\d+\.)\s/, '').trim())],
+            }));
+            return;
+        }
+
+        // Handle Code blocks (```java)
+        if (line.startsWith('```')) {
+            isInCodeBlock = !isInCodeBlock;
+            if (isInCodeBlock && currentCodeBlock.length > 0) {
+                paragraphs.push(new Paragraph({
+                    children: [new TextRun(currentCodeBlock.join('\n'))],
+                }));
+                currentCodeBlock = [];
+            }
+            return;
+        }
+
+        if (isInCodeBlock) {
+            currentCodeBlock.push(line);
+            return;
+        }
+
+        // Handle paragraphs: Check for two-space case (continuing paragraph)
+        if (line.trim() === '' || line.match(/^  /)) {
+            if (currentParagraph.children.length > 0) {
+                paragraphs.push(currentParagraph);
+                currentParagraph = new Paragraph();
+            }
+            return;
+        }
+
+        // If content under heading, add it to current paragraph.
+        if (line.trim()) {
+            let textContent = line;
+            
+            // Bold formatting
+            textContent = textContent.replace(/\*\*(.*?)\*\*/g, (match, p1) => {
+                return new TextRun({ text: p1, bold: true });
+            });
+
+            // Italic formatting
+            textContent = textContent.replace(/\*(.*?)\*/g, (match, p1) => {
+                return new TextRun({ text: p1, italic: true });
+            });
+
+            // Inline code formatting
+            textContent = textContent.replace(/`([^`]+)`/g, (match, p1) => {
+                return new TextRun({ text: p1, font: 'Courier' });
+            });
+
+            currentParagraph.addRun(new TextRun(textContent));
+        }
+    });
+
+    // Add any leftover content
+    if (currentParagraph.children.length > 0) {
+        paragraphs.push(currentParagraph);
+    }
+
+    if (listItems.length > 0) {
+        paragraphs.push(...listItems);
+    }
+
+    // Create and return the document
+    const doc = new Document({
+        sections: [
+            {
+                properties: {},
+                children: paragraphs,
+            },
+        ],
+    });
+
+    return doc;
+}
 /**
  * Determines the file extension based on the user prompt.
  */
