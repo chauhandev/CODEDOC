@@ -204,28 +204,48 @@ app.post('/generateDocument', async (req, res) => {
     }
 });
 
-app.post('/convert', async (req, res) => {
+app.post('/generateDocumentMD', async (req, res) => {
     try {
-      if (!req.files || !req.files.pdf) {
-        return res.status(400).send('No PDF file uploaded.');
-      }
+        const { fileContent, userPrompt } = req.body;
+
+        // Validate file content
+        if (!fileContent) {
+            return res.status(400).send("Bad request: no content provided");
+        }
+        const documentPrompt = `
+         You are a **Expert technical document writer**.\n\n\n
+         Generate a detailed **technical design document** for the given code json structure.
+         Output should be a structured document where there will be Heading paragraphs section bullets wheerever requierd.\n\n
+
+             Include the following in your documentation:
+            1. A brief description of what the code does.
+            2. Any important functions or classes and their purposes.
+            3. Any important queries and their purposes including queries used if present.
+            4. Any notable dependencies or imports.
+            5. Any potential improvements or best practices that could be applied.
+            6. A flowchart to represent the functionality (Mermaid flow chart, without parentheses)
+            7. An ER diagram to represent the database schema (Mermaid ER Diagram, without parentheses)
+            8. The document should be well-structured and easy to understand.
+            9. No irrelevant information should be included in the documentation.
+            10. Copying and pasting the response should be sufficient to get the documentation.
+        
+        - **Code:** \n${fileContent}\n
+
+        - **User Input:** \n${userPrompt || "No additional instructions"}
+        `;
   
-      // Get the uploaded PDF file
-      const pdfFile = req.files.pdf;
-  
-      // Convert PDF to DOCX (example using pdf2docx)
-    //   const docxBuffer = await convert(pdfFile.data);
-  
-    //   // Send the DOCX file back to the client
-    //   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    //   res.setHeader('Content-Disposition', 'attachment; filename=converted.docx');
-    //   res.send(docxBuffer);
+         // Call AI Model to generate content
+        const result = await model.generateContent(documentPrompt);
+        const response = await result.response;
+
+        // Send the response
+        return res.json(response.text().trim());
+        ;
     } catch (error) {
-      console.error('Error during conversion:', error);
-      res.status(500).send('Internal Server Error');
+        console.error("Error generating document: ", error);
+        return res.status(500).json({ error: "Internal server error." });
     }
-  });
-  
+});
   
 app.post("/getDocx", async (req, res) => {
     try {
@@ -246,6 +266,7 @@ app.post("/getDocx", async (req, res) => {
       You are a **Expert technical document writer**.\n\n
       Generate a detailed **technical design document** for the given code json structure.
       Output should be a structured document where there will be Heading paragraphs section bullets wheerever requierd.
+     
       
       - **JSON Structure:** \n${jsonStructure}\n\n\n
         You can use fileContent to get the required information if JSON structure is not sufficient enough
@@ -288,124 +309,23 @@ app.post("/getDocx", async (req, res) => {
   });
   
 
-function convertMarkdownToDocx(content) {
-    const paragraphs = [];
-    const lines = content.split(/\n+/); 
+  async function convertMarkdownToDocx(markdownContent, outputDocxPath) {
+    try {
+        // Convert markdown to HTML
+        const htmlContent = marked.parse(markdownContent);
 
-    let currentParagraph = new Paragraph();
-    let isInList = false;
-    let listItems = [];
-    let isInCodeBlock = false;
-    let currentCodeBlock = [];
+        // Convert HTML to DOCX
+        const docxBuffer = await htmlToDocx(htmlContent);
 
-    let inHeading = false;
-    let headingContent = '';
-    
-    lines.forEach((line, index) => {
-        // Handle Headings (##)
-        if (line.startsWith('## ')) {
-            // If there's already a heading and content, close the current paragraph
-            if (currentParagraph.children.length > 0) {
-                paragraphs.push(currentParagraph);
-                currentParagraph = new Paragraph();
-            }
+        // Write the DOCX file to the output path
+        fs.writeFileSync(outputDocxPath, docxBuffer);
 
-            const headingText = line.slice(3).trim();
-            const headingLevel = line.indexOf(' ') === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
-            paragraphs.push(new Paragraph({
-                heading: headingLevel,
-                children: [new TextRun(headingText)],
-            }));
-
-            inHeading = true;
-            isInList = false;
-            listItems = [];
-            return;
-        }
-
-        // Handle List items (either ordered or unordered)
-        if (line.match(/^(\*|\-|\d+\.)\s/)) {
-            if (!isInList) {
-                isInList = true;
-                listItems = [];
-            }
-
-            listItems.push(new ListItem({
-                children: [new TextRun(line.replace(/^(\*|\-|\d+\.)\s/, '').trim())],
-            }));
-            return;
-        }
-
-        // Handle Code blocks (```java)
-        if (line.startsWith('```')) {
-            isInCodeBlock = !isInCodeBlock;
-            if (isInCodeBlock && currentCodeBlock.length > 0) {
-                paragraphs.push(new Paragraph({
-                    children: [new TextRun(currentCodeBlock.join('\n'))],
-                }));
-                currentCodeBlock = [];
-            }
-            return;
-        }
-
-        if (isInCodeBlock) {
-            currentCodeBlock.push(line);
-            return;
-        }
-
-        // Handle paragraphs: Check for two-space case (continuing paragraph)
-        if (line.trim() === '' || line.match(/^  /)) {
-            if (currentParagraph.children.length > 0) {
-                paragraphs.push(currentParagraph);
-                currentParagraph = new Paragraph();
-            }
-            return;
-        }
-
-        // If content under heading, add it to current paragraph.
-        if (line.trim()) {
-            let textContent = line;
-            
-            // Bold formatting
-            textContent = textContent.replace(/\*\*(.*?)\*\*/g, (match, p1) => {
-                return new TextRun({ text: p1, bold: true });
-            });
-
-            // Italic formatting
-            textContent = textContent.replace(/\*(.*?)\*/g, (match, p1) => {
-                return new TextRun({ text: p1, italic: true });
-            });
-
-            // Inline code formatting
-            textContent = textContent.replace(/`([^`]+)`/g, (match, p1) => {
-                return new TextRun({ text: p1, font: 'Courier' });
-            });
-
-            currentParagraph.addRun(new TextRun(textContent));
-        }
-    });
-
-    // Add any leftover content
-    if (currentParagraph.children.length > 0) {
-        paragraphs.push(currentParagraph);
+        console.log(`DOCX file successfully created at ${outputDocxPath}`);
+    } catch (error) {
+        console.error('Error converting markdown to DOCX:', error);
     }
-
-    if (listItems.length > 0) {
-        paragraphs.push(...listItems);
-    }
-
-    // Create and return the document
-    const doc = new Document({
-        sections: [
-            {
-                properties: {},
-                children: paragraphs,
-            },
-        ],
-    });
-
-    return doc;
 }
+
 /**
  * Determines the file extension based on the user prompt.
  */

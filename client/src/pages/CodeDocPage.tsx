@@ -5,9 +5,6 @@ import {
   Upload,
   FileCode2,
   Loader2,
-  Copy,
-  Check,
-  Download,
   ChevronDown,
 } from "lucide-react";
 import { DocumentationResult } from "../components/DocumentationResult";
@@ -65,7 +62,7 @@ function CodeDocPage() {
     e.preventDefault();
     if (!codeInput.trim()) return;
 
-    await generateDocumentation("/generateDocument", {
+    await generateDocumentation("/generateDocumentMD", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
