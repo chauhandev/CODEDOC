@@ -62,7 +62,7 @@ function CodeDocPage() {
     e.preventDefault();
     if (!codeInput.trim()) return;
 
-    await generateDocumentation("/generateDocumentMD", {
+    await generateDocumentationMD("https://codedoc.onrender.com/generateDocumentMD", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -88,6 +88,33 @@ function CodeDocPage() {
         const jsonData = JSON.parse(data);
         setIsJSONreceived(true);
         setResult([jsonData]);
+      } catch (err) {
+        setIsJSONreceived(false);
+        setResult(data);
+      }
+    } catch (error) {
+      console.error(error);
+      setError("Failed to generate documentation. Please try again.");
+    } finally {
+      setLoading(false);
+      setisDocumentGenerated(true);
+    }
+  };
+
+  const generateDocumentationMD = async (url: string, options?: RequestInit) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error("Failed to generate documentation");
+      }
+      const data = await response.text();
+
+      try {
+        const jsonData = JSON.parse(data);
+        setIsJSONreceived(false);
+        setResult(jsonData);
       } catch (err) {
         setIsJSONreceived(false);
         setResult(data);

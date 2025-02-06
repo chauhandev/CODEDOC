@@ -223,11 +223,13 @@ app.post('/generateDocumentMD', async (req, res) => {
             3. Any important queries and their purposes including queries used if present.
             4. Any notable dependencies or imports.
             5. Any potential improvements or best practices that could be applied.
-            6. A flowchart to represent the functionality (Mermaid flow chart, without parentheses)
-            7. An ER diagram to represent the database schema (Mermaid ER Diagram, without parentheses)
+            6. A flowchart to represent the functionality (Mermaid flow chart, **Strictly Avoid using any bracket,paranthesis for naming node, for example : avoid ->  A[Start] --> B{memo[n] != 0?} inside {} , [] or ()  should not be used and vice versa **)
+            7. An ER diagram to represent the database schema (Mermaid ER Diagram, **Strictly Avoid using any bracket,paranthesis for naming node, for example : avoid ->  A[Start] --> B{memo[n] != 0?} inside {} , [] or ()  should not be used and vice versa**)
             8. The document should be well-structured and easy to understand.
             9. No irrelevant information should be included in the documentation.
             10. Copying and pasting the response should be sufficient to get the documentation.
+
+
         
         - **Code:** \n${fileContent}\n
 
@@ -263,17 +265,16 @@ app.post("/getDocx", async (req, res) => {
   
       // Construct AI Prompt
       const documentPrompt = `
-      You are a **Expert technical document writer**.\n\n
-      Generate a detailed **technical design document** for the given code json structure.
-      Output should be a structured document where there will be Heading paragraphs section bullets wheerever requierd.
-     
-      
-      - **JSON Structure:** \n${jsonStructure}\n\n\n
-        You can use fileContent to get the required information if JSON structure is not sufficient enough
-      - **Code:** \n${fileContent}\n
-
-      - **User Input:** \n${userPrompt || "No additional instructions"}
-    `;
+        You are a **Expert technical document writer**.\n\n
+        Generate a detailed **technical design document** for the given code json structure.
+        Output should be a structured document where there will be Heading paragraphs section bullets wheerever requierd.
+        
+        - **JSON Structure:** \n${jsonStructure}\n\n\n
+          You can use fileContent to get the required information if JSON structure is not sufficient enough
+        - **Code:** \n${fileContent}\n
+  
+        - **User Input:** \n${userPrompt || "No additional instructions"}
+      `;
   
       // Call AI Model to generate content
       const result = await model.generateContent(documentPrompt);
@@ -284,16 +285,26 @@ app.post("/getDocx", async (req, res) => {
         throw new Error("AI Model returned empty content");
       }
   
-      // Create DOCX Document
-      const doc = convertMarkdownToDocx(docContent);
+      // Convert Markdown to DOCX
+      const doc = await convertMarkdownToDocx(docContent);
   
       // Save DOCX File
       const filePath = path.join(outputDir, "Technical_Design_Document.docx");
       const buffer = await Packer.toBuffer(doc);
       fs.writeFileSync(filePath, buffer);
   
-      // Send DOCX File
-      res.attachment("Technical_Design_Document.docx").send(buffer);
+      // Set headers for file download
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=Technical_Design_Document.docx"
+      );
+  
+      // Send the buffer as the response
+      res.send(buffer);
   
       // Delete file after sending
       setTimeout(() => {
@@ -301,30 +312,107 @@ app.post("/getDocx", async (req, res) => {
           fs.unlinkSync(filePath);
         }
       }, 5000); // Delay to ensure file is sent before deletion
-  
     } catch (error) {
       console.error("Error generating DOCX:", error);
       res.status(500).json({ error: "Failed to generate DOCX" });
     }
   });
-  
 
-  async function convertMarkdownToDocx(markdownContent, outputDocxPath) {
+  async function convertMarkdownToDocx(markdownContent) {
     try {
-        // Convert markdown to HTML
-        const htmlContent = marked.parse(markdownContent);
-
-        // Convert HTML to DOCX
-        const docxBuffer = await htmlToDocx(htmlContent);
-
-        // Write the DOCX file to the output path
-        fs.writeFileSync(outputDocxPath, docxBuffer);
-
-        console.log(`DOCX file successfully created at ${outputDocxPath}`);
+      // Parse markdown content into tokens
+      const tokens = marked.lexer(markdownContent);
+  
+      // Create a new Document instance
+      const doc = new Document();
+  
+      // Process each token
+      tokens.forEach((token) => {
+        switch (token.type) {
+          case "heading": {
+            // Handle headings (h1, h2, h3)
+            const headingLevel = token.depth; // 1 for h1, 2 for h2, 3 for h3
+            doc.addSection({
+              children: [
+                new Paragraph({
+                  text: token.text,
+                  heading: HeadingLevel[`HEADING_${headingLevel}`], // e.g., HEADING_1, HEADING_2
+                }),
+              ],
+            });
+            break;
+          }
+  
+          case "paragraph": {
+            // Handle paragraphs with bold text
+            const paragraph = new Paragraph({
+              children: [],
+            });
+  
+            // Split text by ** to identify bold sections
+            const parts = token.text.split("**");
+            parts.forEach((part, index) => {
+              if (index % 2 === 1) {
+                // Odd indices are bold text
+                paragraph.addChildElement(
+                  new TextRun({
+                    text: part,
+                    bold: true,
+                  })
+                );
+              } else {
+                // Even indices are normal text
+                paragraph.addChildElement(
+                  new TextRun({
+                    text: part,
+                  })
+                );
+              }
+            });
+  
+            doc.addSection({
+              children: [paragraph],
+            });
+            break;
+          }
+  
+          case "list": {
+            // Handle lists (optional, if needed)
+            token.items.forEach((item) => {
+              doc.addSection({
+                children: [
+                  new Paragraph({
+                    text: item.text,
+                    bullet: {
+                      level: 0, // Adjust level for nested lists
+                    },
+                  }),
+                ],
+              });
+            });
+            break;
+          }
+  
+          default: {
+            // Handle other token types (e.g., code, blockquote, etc.)
+            doc.addSection({
+              children: [
+                new Paragraph({
+                  text: token.text || token.raw,
+                }),
+              ],
+            });
+            break;
+          }
+        }
+      });
+  
+      return doc;
     } catch (error) {
-        console.error('Error converting markdown to DOCX:', error);
+      console.error("Error converting markdown to DOCX:", error);
+      throw error;
     }
-}
+  }
 
 /**
  * Determines the file extension based on the user prompt.

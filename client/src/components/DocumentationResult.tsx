@@ -2,7 +2,7 @@ import type React from "react"
 import { useState } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import FlowChart from "./FlowChart"
-import ReactMarkdown from "react-markdown";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 interface Documentation {
   Description?: string
@@ -144,7 +144,7 @@ export const DocumentationResult: React.FC<DocumentationResultProps> = ({ docume
       return (
         <div className="space-y-6">
           <Section title="Raw Documentation">
-            <ReactMarkdown>{documentation.toString()}</ReactMarkdown>
+                <MarkdownRenderer markdownText={String(documentation)}></MarkdownRenderer>
           </Section>
         </div>
       )
