@@ -39,6 +39,19 @@ const parseMarkdown = (markdown: string) => {
       );
     }
 
+    // Convert Italic (*text* or _text_)
+    if (/\*(.*?)\*|_(.*?)_/.test(line)) {
+      return (
+        <p
+          key={index}
+          className="text-gray-200 my-3"
+          dangerouslySetInnerHTML={{
+            __html: line.replace(/\*(.*?)\*|_(.*?)_/g, "<em>$1$2</em>"),
+          }}
+        />
+      );
+    }
+
     // Convert Inline Code (`code`)
     if (/`([^`]+)`/.test(line)) {
       return (
@@ -82,6 +95,74 @@ const parseMarkdown = (markdown: string) => {
       return <FlowChart key={index} chartDefinition={chartContent.join("\n")} />;
     }
 
+    // Convert Blockquotes (> text)
+    if (/^>\s/.test(line)) {
+      const content = line.replace(/^>\s/, "");
+      return (
+        <blockquote
+          key={index}
+          className="border-l-4 border-gray-500 pl-4 my-4 text-gray-300 italic"
+        >
+          {content}
+        </blockquote>
+      );
+    }
+
+    // Convert Unordered Lists (- or * or +)
+    if (/^[-*+]\s/.test(line)) {
+      const content = line.replace(/^[-*+]\s/, "");
+      return (
+        <ul key={index} className="list-disc list-inside my-3 text-gray-300">
+          <li>{content}</li>
+        </ul>
+      );
+    }
+
+    // Convert Ordered Lists (1., 2., 3., etc.)
+    if (/^\d+\.\s/.test(line)) {
+      const content = line.replace(/^\d+\.\s/, "");
+      return (
+        <ol key={index} className="list-decimal list-inside my-3 text-gray-300">
+          <li>{content}</li>
+        </ol>
+      );
+    }
+
+    // Convert Tables
+    if (/\|/.test(line)) {
+      const columns = line.split("|").map((col:any) => col.trim());
+      return (
+        <table key={index} className="table-auto w-full my-4">
+          <thead>
+            <tr>
+              {columns.map((col:any, i:any) => (
+                <th key={i} className="border px-4 py-2 text-gray-100">
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lines
+              .slice(index + 1)
+              .filter((l) => /\|/.test(l))
+              .map((row, rowIndex) => {
+                const cells = row.split("|").map((cell) => cell.trim());
+                return (
+                  <tr key={rowIndex}>
+                    {cells.map((cell, cellIndex) => (
+                      <td key={cellIndex} className="border px-4 py-2 text-gray-300">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      );
+    }
+
     // Default paragraph styling
     return (
       <p key={index} className="text-gray-300 leading-relaxed my-3">
@@ -95,7 +176,7 @@ const parseMarkdown = (markdown: string) => {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdownText }) => {
   return (
-    <div className="bg-gray-900 p-6 rounded-lg shadow-lg w-full mx-auto">
+    <div className="bg-gray-900 p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
       {parseMarkdown(markdownText)}
     </div>
   );
