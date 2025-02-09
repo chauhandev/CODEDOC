@@ -176,7 +176,7 @@ const parseMarkdown = (markdown: string) => {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdownText }) => {
   return (
-    <div className="bg-gray-900 p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
+    <div className="bg-gray-900 p-6 rounded-lg shadow-lg w-full mx-auto">
       {parseMarkdown(markdownText)}
     </div>
   );
