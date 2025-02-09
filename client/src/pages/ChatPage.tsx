@@ -35,7 +35,7 @@ function ChatPage() {
         content: msg.content,
       }));
 
-      const response = await fetch('/generalquery', {
+      const response = await fetch('https://codedoc.onrender.com/generalquery', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
