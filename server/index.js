@@ -228,8 +228,8 @@ app.post('/generateDocumentMD', async (req, res) => {
             8. The document should be well-structured and easy to understand.
             9. No irrelevant information should be included in the documentation.
             10. * Use (■) for squares (▶) for triangles (✔) for checkmarks or any other instead * for unorderd list which ever best suits for the points  *            
-
-        
+            11. Copying and pasting the response should be sufficient to get the documentation.
+                    
         - **Code:** \n${fileContent}\n
 
         - **User Input:** \n${userPrompt || "No additional instructions"}
