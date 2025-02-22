@@ -28,7 +28,6 @@ function CodeDocPage() {
   const [isJSONreceived, setIsJSONreceived] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-  const [selectedAction, setSelectedAction] = useState("");
 
   const toggleDropdown = () => {
     setIsDropdownVisible((prev) => !prev);
@@ -269,7 +268,6 @@ function CodeDocPage() {
   };
 
   const handleAction = (action:any) => {
-    setSelectedAction(""); 
     toggleDropdown();
 
     switch (action) {
