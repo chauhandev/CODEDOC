@@ -227,8 +227,7 @@ app.post('/generateDocumentMD', async (req, res) => {
             7. An ER diagram to represent the database schema (Mermaid ER Diagram, **Strictly Avoid using any bracket,paranthesis for naming node, for example : avoid ->  A[Start] --> B{memo[n] != 0?} inside {} , [] or ()  should not be used and vice versa**)
             8. The document should be well-structured and easy to understand.
             9. No irrelevant information should be included in the documentation.
-            10. Copying and pasting the response should be sufficient to get the documentation.
-
+            10. * Use (■) for squares (▶) for triangles (✔) for checkmarks or any other instead * for unorderd list which ever best suits for the points  *            
 
         
         - **Code:** \n${fileContent}\n
