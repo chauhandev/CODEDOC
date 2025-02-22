@@ -12,6 +12,7 @@ import { DocumentationResult } from "../components/DocumentationResult";
 import html2pdf from "html2pdf.js";
 // import { Paragraph, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
+// import htmlToDocx from "html-to-docx";
 
 
 function CodeDocPage() {
@@ -23,10 +24,15 @@ function CodeDocPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isDocumentGenerated, setisDocumentGenerated] = useState(false);
-
+  const [prompt ,setPrompt] = useState("");
   const [isJSONreceived, setIsJSONreceived] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [selectedAction, setSelectedAction] = useState("");
 
+  const toggleDropdown = () => {
+    setIsDropdownVisible((prev) => !prev);
+  };
   const handleGithubSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await generateDocumentation(
@@ -38,9 +44,12 @@ function CodeDocPage() {
 
   const handleFileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    e.preventDefault();  
+    const isFileUploaded = file !== null;
+    const fileContent = isFileUploaded ? await file!.text() : codeInput.trim();
+  
+    if (!fileContent) return;
 
-    const fileContent = await file.text();
     await generateDocumentation("/generateDocument", {
       method: "POST",
       headers: {
@@ -59,20 +68,28 @@ function CodeDocPage() {
     }
   };
   const handleCodeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!codeInput.trim()) return;
+    e.preventDefault();  
+    const isFileUploaded = file !== null;
+    const fileContent = isFileUploaded ? await file!.text() : codeInput.trim();
+  
+    if (!fileContent) return;
 
-    await generateDocumentationMD("https://codedoc.onrender.com/generateDocumentMD", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        fileContent: codeInput,
-        userPrompt: "",
-      }),
-    });
+    try {
+      await generateDocumentationMD("https://codedoc.onrender.com/generateDocumentMD", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileContent: fileContent,
+          userPrompt: prompt,
+        }),
+      });
+    } catch (error) {
+      console.error("Error generating documentation:", error);
+    }
   };
+  
 
   const generateDocumentation = async (url: string, options?: RequestInit) => {
     setLoading(true);
@@ -155,42 +172,53 @@ function CodeDocPage() {
       const pdfBlob = await generatePdfBlob();
       saveAs(pdfBlob, "documentation.pdf");
     } else if (format === "docx") {
+      const htmlContent = contentRef.current.innerHTML;
       try {
-        let fileContent = "";
+        // const docxBuffer = await htmlToDocx(htmlContent);
+        // const docxBlob = new Blob([docxBuffer], {
+        //     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        // });
+        // saveAs(docxBlob, "document.docx");
+    } catch (error) {
+        console.error("Error exporting to Word:", error);
+    }
+
+      // try {
+      //   let fileContent = "";
     
-        if (file) {
-          fileContent = await file.text(); // Use file content if available
-        } else if (codeInput.trim()) {
-          fileContent = codeInput; // Use user input if file is not present
-        } else {
-          return; // Exit if both are empty
-        }
+      //   if (file) {
+      //     fileContent = await file.text(); // Use file content if available
+      //   } else if (codeInput.trim()) {
+      //     fileContent = codeInput; // Use user input if file is not present
+      //   } else {
+      //     return; // Exit if both are empty
+      //   }
     
-        const response = await fetch("/getDocx", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonStructure: JSON.stringify(result), // JSON Representation
-            fileContent, // Processed Content
-            userPrompt: "", // Optional Prompt
-          }),
-        });
+      //   const response = await fetch("/getDocx", {
+      //     method: "POST",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify({
+      //       jsonStructure: JSON.stringify(result), // JSON Representation
+      //       fileContent, // Processed Content
+      //       userPrompt: "", // Optional Prompt
+      //     }),
+      //   });
     
-        if (!response.ok) throw new Error("Failed to generate DOCX");
+      //   if (!response.ok) throw new Error("Failed to generate DOCX");
     
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "Technical_Design_Document.docx";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+      //   const blob = await response.blob();
+      //   const url = window.URL.createObjectURL(blob);
+      //   const a = document.createElement("a");
+      //   a.href = url;
+      //   a.download = "Technical_Design_Document.docx";
+      //   document.body.appendChild(a);
+      //   a.click();
+      //   document.body.removeChild(a);
+      //   window.URL.revokeObjectURL(url);
     
-      } catch (error) {
-        console.error("Download Error:", error);
-      }
+      // } catch (error) {
+      //   console.error("Download Error:", error);
+      // }
     }
     
     
@@ -240,11 +268,10 @@ function CodeDocPage() {
       .outputPdf("blob");
   };
 
-
-  const [selectedAction, setSelectedAction] = useState("");
-
   const handleAction = (action:any) => {
     setSelectedAction(""); 
+    toggleDropdown();
+
     switch (action) {
       case "copy":
         handleCopy();
@@ -260,22 +287,22 @@ function CodeDocPage() {
         break;
       default:
         break;
+
     }
   };
 
-  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-  const toggleDropdown = () => {
-    setIsDropdownVisible((prev) => !prev);
-  };
+ 
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <FileCode2 className="w-12 h-12 text-blue-400" />
+          <div className="flex flex-row items-center justify-center mb-4">
+            <div className="flex items-center justify-center mb-4">
+              <FileCode2 className="w-12 h-12 text-blue-400" />
+            </div>
+            <h1 className="text-4xl font-bold mb-4">CODEDOC</h1>
           </div>
-          <h1 className="text-4xl font-bold mb-4">CODEDOC</h1>
           <p className="text-xl text-gray-300">
             Generate AI-Powered Documentation for Your Code
           </p>
@@ -303,7 +330,7 @@ function CodeDocPage() {
                     />
                   </label>
                 </div>
-                <button
+                {/* <button
                   type="submit"
                   disabled={!file || loading}
                   className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
@@ -314,9 +341,9 @@ function CodeDocPage() {
                     <Upload className="w-5 h-5 mr-2" />
                   )}
                   Generate from File
-                </button>
+                </button> */}
               </form>
-              <form onSubmit={handleGithubSubmit} className="pt-4">
+              {/* <form onSubmit={handleGithubSubmit} className="pt-4">
                 <input
                   type="url"
                   placeholder="Enter GitHub repository URL"
@@ -337,7 +364,7 @@ function CodeDocPage() {
                   )}
                   Generate from GitHub
                 </button>
-              </form>
+              </form> */}
             </div>
   
             {/* Paste Code Section */}
@@ -353,9 +380,9 @@ function CodeDocPage() {
                   onChange={(e) => setCodeInput(e.target.value)}
                   required
                   className="w-full p-3 mb-4 rounded bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-400 custom-scrollbar"
-                  rows={10}
+                  rows={4}
                 />
-                <button
+                {/* <button
                   type="submit"
                   disabled={loading}
                   className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
@@ -366,9 +393,41 @@ function CodeDocPage() {
                     <FileCode2 className="w-5 h-5 mr-2" />
                   )}
                   Generate from Code
-                </button>
+                </button> */}
               </form>
             </div>
+            {/* Prompt Input & Centered Generate Button */}
+          <div className="col-span-2 bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+            <h2 className="text-xl font-semibold mb-4 text-white">Enter Your Prompt</h2>
+            <textarea
+              placeholder="Describe what you want to generate..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              required
+              className="w-full p-3 mb-4 rounded bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-400 custom-scrollbar"
+              rows={2}
+            />
+            <div className="flex justify-center gap-10">
+              <button
+                type="submit"
+                onClick={handleCodeSubmit}
+                disabled={loading}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Upload className="w-5 h-5 mr-2" />}
+                Generate MarkDown
+              </button>
+              <button
+                type="submit"
+                onClick={handleFileSubmit}
+                disabled={loading}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Upload className="w-5 h-5 mr-2" />}
+                Generate 
+              </button>
+            </div>
+          </div>
           </div>)
          }
         {error && (
