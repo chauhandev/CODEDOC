@@ -100,12 +100,12 @@ function ChatPage() {
     <div className="flex flex-col h-full bg-gray-900">
       {/* Chat Container */}
       <div className="flex-1 overflow-hidden">
-        <div className="max-w-3xl h-[calc(100vh-180px)] mx-auto my-4 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="max-w-4xl h-[calc(100vh-180px)] mx-auto my-4 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
           {/* Messages Container */}
           <div className="h-full overflow-y-auto">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full">
-                <Bot className="h-12 w-12 text-gray-500" />
+                <Bot className="h-12 w-12 text-white-900" />
                 <p className="mt-2 text-lg text-gray-400 text-center">
                   How can I assist you today?
                 </p>
@@ -129,7 +129,7 @@ function ChatPage() {
 
       {/* Chat Input */}
       <div className="flex-none bg-gray-900 border-t border-gray-700 p-2">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <ChatInput onSend={handleSendMessage} disabled={isLoading} />
         </div>
       </div>
